@@ -16,3 +16,7 @@ Revision history for Perl extension SRPC
         - remote the 'callback' string. Now when the first parameter is a
         subroutine reference, Agent store the reference and the subroutine
         will be called when the remote call is over.
+0.5 98/2/17
+        - better $VERSION handling
+        - some more explanation on interaction with AutoLoader (in AnyLocal
+        man page).

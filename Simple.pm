@@ -1,9 +1,12 @@
 package RPC::Simple;
 
+use strict  ;
+use vars qw/$VERSION/;
+
 use RPC::Simple::AnyLocal;
 use RPC::Simple::AnyRemote ;
 
-
+$VERSION = '0.5' ;
 
 1;
 __END__

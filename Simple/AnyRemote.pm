@@ -1,14 +1,14 @@
 package RPC::Simple::AnyRemote;
 
 use strict;
-use vars qw(@ISA $VERSION $AUTOLOAD);
+use vars qw(@ISA $VERSION);
 use RPC::Simple::AnyWhere ;
 
 # Items to export into callers namespace by default. Note: do not export
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-$VERSION = '0.01';
+( $VERSION ) = '$Revision: 1.5 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 @ISA = qw(RPC::Simple::AnyWhere) ;
 

@@ -1,13 +1,15 @@
 package RPC::Simple::Factory;
 
 use strict;
-use vars qw(@ISA @EXPORT $serverPid);
+use vars qw(@ISA @EXPORT $VERSION $serverPid);
 use Tk ;
 use IO::Socket ;
 use Fcntl ;
 use Data::Dumper ;
 
 require Exporter;
+
+( $VERSION ) = '$Revision: 1.5 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 @ISA = qw(Exporter);
 @EXPORT= qw(spawn) ;

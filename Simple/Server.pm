@@ -24,7 +24,7 @@ use AutoLoader 'AUTOLOAD';
 # Do not simply export all your public functions/methods/constants.
 @EXPORT = qw(mainLoop chilDeath goodGuy registerChild unregisterChild);
 
-$VERSION = '0.01';
+( $VERSION ) = '$Revision: 1.5 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 # Preloaded methods go here.
 

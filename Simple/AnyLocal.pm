@@ -11,7 +11,8 @@ use RPC::Simple::AnyWhere ;
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-$VERSION = '0.01';
+( $VERSION ) = '$Revision: 1.6 $ ' =~ /\$Revision:\s+([^\s]+)/;
+
 @ISA = qw(RPC::Simple::AnyWhere) ;
 *_RPC_SUBS=*RPC::Simple::AnyWhere::_RPC_SUBS;
 # Preloaded methods go here.
@@ -68,7 +69,7 @@ RPC::Simple::AnyLocal - Perl extension defining a virtual SRPC client class
 
  use RPC::Simple::AnyLocal;
  use vars qw($VERSION @ISA @RPC_SUB) ;
- @ISA = qw(RPC::Simple::AnyLocal);
+ @ISA = qw(RPC::Simple::AnyLocal [other_class] );
  @RPC_SUB = qw(remoteHello remoteAsk);
 
  sub new
@@ -175,6 +176,32 @@ Will contains the ref of the RPC::Simple::Agent object.
 =head2 remoteHostName
 
 Will contains the name of the remote host.
+
+=head1 Inheritance and Autoload
+
+Since RPC::Simple uses the AUTOLOAD subroutine to delegate unknown calls to 
+the remote class, you must pay attention if you use or inherit classes 
+which use the AutoLoader mechanism.
+
+The AUTOLOAD defined in this class will first check if the called function
+is declared in the @RPC_SUB arrays of all inherited classes. If yes it 
+will call the remote function. If not it will forward the call to the 
+AutoLoader::AUTOLOAD routine. In this case you fall back on the usual
+AutoLoad mechanism.
+
+For this scheme to work, it is important that RPC::Simple::AUTOLOAD is run
+BEFORE the AutoLoader::AUTOLOAD routine.
+
+So when inheriting from RPC::Simple and another class (say Foo::Bar), you must
+put RPC::Simple::AnyLocal BEFORE your class in the @ISA array.
+
+For instance, you must declare :
+@ISA = qw(RPC::Simple::AnyLocal Foo::Bar);
+
+BTW, if you are mixing autoloading, remote calls and inheritance, which is 
+a recipe for a good headache, you really (I mean it) should use subroutine
+stubs for the auloaded functions. (It does really work better).
+See AutoLoad(3).
 
 =head1 AUTHOR
 

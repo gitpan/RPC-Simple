@@ -9,7 +9,7 @@ use vars qw($VERSION $AUTOLOAD @RPC_SUB %_RPC_SUBS);
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-$VERSION = '0.01';
+( $VERSION ) = '$Revision: 1.4 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 # Preloaded methods go here.
 
