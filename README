@@ -1,0 +1,49 @@
+This is the README file for SRPC::* , a bunch of Perl
+classes to perform simple remote procedure calls.
+
+This is Version 0.01.  See the "Changes" file for details on
+the new features and fixes in this release.
+
+This mopule was written with perl5.004. 
+
+
+See the embedded documentation in the module for more details.
+
+Comments and suggestions are always welcome.
+
+Note that this module is in alpha state. Its interface may change (but
+I hope not).
+
+Alpha exit criteria:
+- When some peoples (well, say 10 guys) tell me that they've used it 
+  and did not find major bug with the module or minor problems with the 
+  interface.
+
+Legal mumbo jumbo:
+
+ Copyright (c) 1995 Dominique Dumont. All rights reserved.
+ This program is free software; you can redistribute it and/or
+ modify it under the same terms as Perl itself.
+ THIS PACKAGE IS PROVIDED "AS IS" AND WITHOUT ANY EXPRESS OR
+ IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+ WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+ 
+
+ - Dominique Dumont
+   dominique_dumont@grenoble.hp.com
+
+---------------------------------------------------------------------
+INSTALLATION
+
+   	 gunzip -c <dist_file>.tar.gz | tar xvf -
+   	 cd <dist_directory>
+   	 perl Makefile.PL
+   	 make test          
+   	 make install
+
+
+
+
+
+
+

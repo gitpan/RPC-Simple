@@ -1,0 +1,13 @@
+Changes
+RPC/Simple.pm
+RPC/Simple/Agent.pm
+RPC/Simple/AnyLocal.pm
+RPC/Simple/Factory.pm
+RPC/Simple/Server.pm
+RPC/Simple/ObjectHandler.pm
+RPC/Simple/CallHandler.pm
+RPC/Simple/AnyRemote.pm
+MANIFEST
+Makefile.PL
+test.pl
+README
