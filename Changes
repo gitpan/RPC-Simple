@@ -1,22 +1,36 @@
-Revision history for Perl extension SRPC
+2004-10-18  Dominique Dumont  <domi@komarr.grenoble.hp.com>
 
-0.1  Thu May 15 13:39:29 1997
-	- original version; created by h2xs 1.16
+	* AnyWhere.pm (AUTOLOAD): Removed possibilty to use AutoLoader in
+	classes communicating over network. User complained that using
+	AutoLoading made debugging much harder. 
 
-0.2 97/11/5
-        - Fixed problem with directory layout. It should install properly
-        with make install.
+	* Factory.pm (new): changed API to use named parameters. Old API
+	is still suported (although obsolete)
+	(new): tk_top parameter is optional. So user can use its own event
+	loop. *Using TK control loop is no longer mandatory*
+	(DESTROY): new method to clean up socket during destruction.
+	(getSocket): new method to get the socket created by factory. This
+	socket must be used in user event loop when Tk is not used.
 
-0.3 97/12/2
-        - Simplified AnyRemote. Fixed some bugs, better tests
- 
+
+0.5 98/2/17
+        - better $VERSION handling
+        - some more explanation on interaction with AutoLoader (in AnyLocal
+        man page).
+
 0.4 97/12/31
         - added RPC_SUB arrays to avoid infinite loop between local and 
         remote when a function is unknown.
         - remote the 'callback' string. Now when the first parameter is a
         subroutine reference, Agent store the reference and the subroutine
         will be called when the remote call is over.
-0.5 98/2/17
-        - better $VERSION handling
-        - some more explanation on interaction with AutoLoader (in AnyLocal
-        man page).
+
+0.3 97/12/2
+        - Simplified AnyRemote. Fixed some bugs, better tests
+ 
+0.2 97/11/5
+        - Fixed problem with directory layout. It should install properly
+        with make install.
+
+0.1  Thu May 15 13:39:29 1997
+	- original version; created by h2xs 1.16

@@ -6,7 +6,7 @@ use vars qw/$VERSION/;
 use RPC::Simple::AnyLocal;
 use RPC::Simple::AnyRemote ;
 
-$VERSION = '0.5' ;
+$VERSION = '1.001' ;
 
 1;
 __END__
@@ -40,7 +40,7 @@ It sure is not :
  - securityproof
  - foolproof
 
-But it works. (Although I'm opened to suggestion regarging the
+But it works. (Although I'm opened to suggestion regarding the
 "un-proof" areas)
 
 The module is made of the following sub-classes :
@@ -88,11 +88,12 @@ If this call has a code reference as first parameter, Agent
 will call this code when the remote call is over. I.e. all remote
 procedure call must be designed in asynchronous mode.
 
-Note that undefined method not declared in @RPC_SUB will be autoloaded
-(or at least, I'll try to autoload them).
+Note that undefined method not declared in @RPC_SUB will lead to an
+error. Autoloading is no longer supported (unless someone complains
+loudly).
 
-Note that Factory and Agent actually use Tk to manage the socket connection.
-
+Note that Factory and Agent can use Tk to manage the socket
+connection, but thisis no longer required..
 
 
 On the remote side, the user will write its RemoteClass which will inherit
@@ -112,7 +113,7 @@ from AnyRemote.
 
 
 RemoteClass will be called with the method name that was invoked for 
-LocalClass. RemtoeClass may call a function from local class using the
+LocalClass. RemtoteClass may call a function from local class using the
 same mechanism but it may NOT expect a call-back from this call to the 
 local side.
 
@@ -127,10 +128,10 @@ variable value as a method parameter.
 
 =head1 CAVEATS
 
-Well, this stuff is supposed to be pretty simple, the code to handle the
-RPC and callback is not much complicated, but I sure have a lot of problem to 
-write a doc which make using this module simple. Future version may get
-better depending on your comments or questions.
+Well, this stuff is supposed to be pretty simple, the code to handle
+the RPC and callback is not very complicated, but I sure have a lot of
+problem to write a doc which make using this module simple. Future
+version may get better depending on your comments or questions.
 
 =head1 AUTHOR
 

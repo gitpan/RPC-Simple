@@ -11,7 +11,7 @@ use RPC::Simple::AnyWhere ;
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-( $VERSION ) = '$Revision: 1.6 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 1.7 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 @ISA = qw(RPC::Simple::AnyWhere) ;
 *_RPC_SUBS=*RPC::Simple::AnyWhere::_RPC_SUBS;
@@ -101,9 +101,9 @@ RPC::Simple::AnyLocal - Perl extension defining a virtual SRPC client class
  # create factory
  my $factory = new RPC::Simple::Factory($mw,\$verbose) ;
  my $local = new MyLocal($factory) ;
- $mw -> Button (text => 'quit', command => sub {exit;} ) -> pack ;
- $mw -> Button (text => 'remoteAct',
-   command => sub {$local->remoteHello();} ) -> pack ;
+ $mw -> Button (-text => 'quit', -command => sub {exit;} ) -> pack ;
+ $mw -> Button (-text => 'remoteAct',
+   -command => sub {$local->remoteHello();} ) -> pack ;
 
  MainLoop ; # Tk's
 

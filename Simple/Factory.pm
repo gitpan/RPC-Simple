@@ -1,15 +1,16 @@
 package RPC::Simple::Factory;
 
 use strict;
+use warnings ;
 use vars qw(@ISA @EXPORT $VERSION $serverPid);
-use Tk ;
 use IO::Socket ;
 use Fcntl ;
 use Data::Dumper ;
+use Carp ;
 
 require Exporter;
 
-( $VERSION ) = '$Revision: 1.5 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 1.7 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 @ISA = qw(Exporter);
 @EXPORT= qw(spawn) ;
@@ -26,25 +27,48 @@ require Exporter;
 sub new
   {
     my $type = shift ;
-    my $tkTop = shift ;
-    my $verboseRef = shift ;
-    my $remote  = shift || 'localhost'; 
-    my $port    = shift || 7810;	
-    
-    my $self= {} ;
-    $self->{verbose} = $verboseRef ;
-    
-    $self->{handleIdx} = 0;
-    $self->{remoteHostName} = $remote ;
+
+    my ($tkTop,$verboseRef,$remote,$port,$timeout);
+
+    if (ref $_[0])
+      {
+	# old style api
+	$tkTop = shift ;
+	$verboseRef = shift ;
+	$remote  = shift || 'localhost'; 
+	$port    = shift || 7810;	
+	$timeout = shift || 0 ;
+      }
+    else
+      {
+	# new style
+	my %args = @_ ;
+
+	$tkTop      = $args{tk_top};
+	$verboseRef = $args{verbose_ref} ;
+	$remote     = $args{remote_host} || 'localhost';
+	$port       = $args{remote_port} || '7810' ;
+	$timeout    = $args{timeout}     || 0 ;
+      }
+
+    my $self = {
+		verbose => $verboseRef,
+		handleIdx => 0,
+		remoteHostName => $remote
+	       };
+
     my ($iaddr, $paddr, $proto, $line);
-    
+
     if ($port =~ /\D/) { $port = getservbyname($port, 'tcp') }
-    
+
     print "No port" unless $port;
 
+    my @time_arg = $timeout ? (Timeout => $timeout) : () ;
     $self->{'socket'} = IO::Socket::INET -> new (PeerAddr => $remote,
-                                              PeerPort => $port,
-                                              Proto => 'tcp' ) ;
+						 PeerPort => $port,
+						 Proto => 'tcp',
+						 @time_arg) ;
+
     die "Can't create a socket for $remote, port $port\n\t$!\n" 
       unless defined $self->{'socket'} ;
 
@@ -52,18 +76,35 @@ sub new
       || die "fcntl failed $!\n";
 
     print "$type object created \n";
-    
+
     # print "sleep over, closing\n";
     # shutdown ($self->{'socket'}, 2)            || print "close: $!";
-    
+
     bless $self, $type ;
-    
-    # register socket to TK's fileevent ...
-    $tkTop -> fileevent($self->{'socket'},
-                        'readable' => [$self, 'readSock']) ;
-    $self->{tkTop} = $tkTop ;
+
+    if (defined $tkTop) 
+      {
+	# register socket to TK's fileevent ...
+	$tkTop -> fileevent($self->{'socket'},
+			    'readable' => [$self, 'readSock']) ;
+	$self->{tkTop} = $tkTop ;
+      }
+
     $self->{sockBuffer} = '' ;
     return $self ;
+  }
+
+sub DESTROY
+  {
+    my $self = shift ;
+    print "closing Factory socket\n";
+
+    # de-register from Tk
+    $self->{tkTop} -> fileevent($self->{'socket'},readable => '')
+      if defined $self->{tkTop} ;
+
+    #$self->{socket}->close;
+    shutdown($self->{socket},2) ;
   }
 
 sub logmsg
@@ -118,28 +159,15 @@ sub writeSockBuffer
         push @$refs, $objectName ;
         push @$names, 'objectName' ;
       }
-    
+
     my $d = Data::Dumper->new ( $refs, $names ) ;
     my $paramStr = "#begin\n".$d->Dumpxs."#end\n"  ; 
     #my $str = sprintf("%6d",length($paramStr)) . $paramStr ;
     my $str = $paramStr ;
     $self->logmsg( "$str\n");
-    
+
     $self->{sockBuffer} .= $str ;
-    # can't have read and write fileevent at the same time ...
-    
-    # 	$self->{tkTop} -> fileevent($self->{'socket'},
-    # 						'writable' => [$self, 'writeSock']) ;
-    # 	$self->{tkTop} -> fileevent($self->{'socket'},
-    # 						'readable' => [$self, 'readSock']) ;
-    #   }
-    
-    # sub writeSock
-    #   {
-    # 	my $self= shift ;
-    
-    # 	print "writeSock called\n";
-    
+
     my $str2 = "#begin_buffer\n".$self->{sockBuffer}."#end_buffer\n" ;
     no strict 'refs' ;
     my $val = send($self->{'socket'} ,$str2,0) ;
@@ -151,16 +179,14 @@ sub writeSockBuffer
       {
         warn "write failed for \n",$str2  ;
       } 
-    
+
     $self->{sockBuffer} = '' ;
-    # 	$self->{tkTop} -> fileevent($self->{'socket'}, 'writable' => '') ;
-    # 	$self->{tkTop} -> fileevent($self->{'socket'},
-    # 						'readable' => [$self, 'readSock']) ;
   }
 
 sub readSock
   {
     my $self = shift ;
+
     my $fh = $self->{'socket'} ;
     
     $self->logmsg( "readSock called\n");
@@ -184,8 +210,7 @@ sub readSock
         $self->logmsg( "->",$line );
         $code .= $line ;
         
-        if ($line =~ /\s*#end$/
-           )
+        if ($line =~ /\s*#end$/)
           {
             push @codeTab, $code ;
             $code = '' ;
@@ -196,18 +221,13 @@ sub readSock
           {
             $codeEnd = 0 ;
           }
-        
-        # line is still #end
-        # 		my $dummy=''; ;
-        # 		my $recvRet = recv(CLIENT,$dummy,1,MSG_PEEK) ;
-        # 		unless (defined $recvRet) {warn "recv error ",$!,"\n" ; return 0;}
-        # 		last if (length($dummy) == 0)
       }
     
     use strict ;
     
     foreach $code (@codeTab)
       {
+	# these lexical variables are assigned in the eval
         my ($args,$method,$reqId,$handle,$objectName) ;
         eval $code ;
         
@@ -221,7 +241,7 @@ sub readSock
             $self->logmsg( "calling method $method\n");
             $self->{handleTab}{$handle} -> callMethod($method , $args) ;
           }
-        else
+	else
           {
             # it's a call-back
             $self->logmsg( "callback for handle $handle, request $reqId\n");
@@ -229,7 +249,6 @@ sub readSock
             #			  or print "eval failed: $@\n";
           }
       }
-    
     return 1;
   }
 
@@ -250,6 +269,12 @@ sub spawn
     print "spawned server pid $serverPid\n" ; # don't use verbose
     sleep 2 ; # let the server start
     return $serverPid ;
+  }
+
+sub getSocket
+  {
+    my $self = shift;
+    return $self->{socket};
   }
 
 sub END
@@ -274,6 +299,7 @@ RPC::Simple::Factory - Perl extension for creating RPC client
 
 =head1 SYNOPSIS
 
+ # with Tk
  use Tk;
  use RPC::Simple::Factory;
 
@@ -281,28 +307,63 @@ RPC::Simple::Factory - Perl extension for creating RPC client
  my $verbose = 1 ; # up to you 
 
  # create factory
- my $factory = new RPC::Simple::Factory($mw,\$verbose) ;
+ my $factory = new RPC::Simple::Factory
+  ( 
+    tk_top => $mw,
+    verbose_ref => \$verbose
+  ) ;
+
+ # without Tk
+ # create factory
+ my $factory = new RPC::Simple::Factory() ;
+ my $socket = $factory -> getSocket ;
+
+ # create event loop
 
 =head1 DESCRIPTION
 
-This class handles all the tricky stuff involving socket handling. 
-Note that this was written to be used with Tk. 
+This class handles all the tricky stuff involving socket handling.
+This module was originally written to be used with Tk. Now you can use
+it without Tk, in blocking mode or asynchronous mode.
 
 =head1 Methods
 
-=head2 new($tkTop, [ $verboseRef ], [remote_host], [port] )
+=head2 new(...)
 
-create the factory. One factory must be created for each remote host..
+Create the factory. One factory must be created for each remote host.
 
-tkTop is the ref of Tk's main window.
+Parameters are:
 
-$verboseRef is the ref of a variable. When set to 1 at any time, the object
-will become verbose i.e. it will print on STDOUT a lot of messages related 
-to the RPC processing. Then you may use $verboseRef as a text variable on 
-a check button to control whether you want to trace RPC messages or not.
-If not provided, the object will not be verbose.
+=over
 
-By default, remote_host is set to 'localhost', port is set to 7810.
+=item tk_top
+
+When used with Tk, tk_top is the ref of Tk's main window. Factory will
+register the communication socket to Tk's filevent. 
+
+=item verbose_ref
+
+verbose_ref is the ref of a variable. When set to 1 at any time, the
+object will become verbose i.e. it will print on STDOUT a lot of
+messages related to the RPC processing.
+
+With Tk, you may use $verboseRef as a text variable on a check button
+to control whether you want to trace RPC messages or not.  If not
+provided, the object will not be verbose.
+
+=item remote_host
+
+default: C<localhost>
+
+=item remote_port
+
+default: 7810
+
+=item timeout
+
+Socket time out (default 0). See L<IO::Socket> for more details.
+
+=back
 
 =head2 logmsg (...)
 
@@ -317,6 +378,12 @@ Additional parameters will be passed as is to the remote 'new' method.
 =head2 getRemoteHostName
 
 return the remote host name
+
+=head2 getSocket
+
+Returns the socket created by Factory. So you can use it in your own
+event loop. When using Factory with Tk, the constructor will take care
+of registering the socket in Tk's event loop.
 
 =head2 writeSockBuffer ( agent_index, remote_method, request_id, parameter, [object_name])
 

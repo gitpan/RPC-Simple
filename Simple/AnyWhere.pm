@@ -1,15 +1,14 @@
 package RPC::Simple::AnyWhere;
 
 use strict;
-use AutoLoader ;
-
+use Carp ;
 use vars qw($VERSION $AUTOLOAD @RPC_SUB %_RPC_SUBS);
 
 # Items to export into callers namespace by default. Note: do not export
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-( $VERSION ) = '$Revision: 1.4 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 1.5 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 # Preloaded methods go here.
 
@@ -31,21 +30,19 @@ sub _searchSubs
 
 sub AUTOLOAD
   {
-    my $self = $_[0] ; # do not shift out self
-	
+    my $self = shift ;
+
     my $called = $AUTOLOAD ;
     $called =~ s/.*::// ;
 
     if (defined $_RPC_SUBS{ref($self)} and
         scalar grep ($called eq $_,@{$_RPC_SUBS{ref($self)}} ))
       {
-        shift ; # delegate does not want $self as first parameter
         $self->{_twinHandle}->delegate($called,@_) ;
         return $self ;
       }
 
-    $AutoLoader::AUTOLOAD=$AUTOLOAD;
-    goto &AutoLoader::AUTOLOAD ;
+	croak "Undefined subroutine $AUTOLOAD called";
   }
 
 sub DESTROY

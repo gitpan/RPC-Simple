@@ -1,4 +1,7 @@
+# -*- cperl -*-
 package RealMyLocal ;
+use strict ;
+use warnings ;
 
 use vars qw($VERSION @ISA @RPC_SUB) ;
 @ISA = qw(RPC::Simple::AnyRemote);

@@ -10,6 +10,7 @@ Simple/AnyRemote.pm
 Simple/AnyWhere.pm
 MANIFEST
 Makefile.PL
-test.pl
+t/tk.t
 RealMyLocal.test_pm
 README
+META.yml                                 Module meta-data (added by MakeMaker)

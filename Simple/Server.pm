@@ -16,7 +16,6 @@ use IO::Select ;
 use RPC::Simple::ObjectHandler ;
 
 require Exporter;
-use AutoLoader 'AUTOLOAD';
 
 @ISA = qw(Exporter);
 # Items to export into callers namespace by default. Note: do not export
@@ -24,7 +23,7 @@ use AutoLoader 'AUTOLOAD';
 # Do not simply export all your public functions/methods/constants.
 @EXPORT = qw(mainLoop chilDeath goodGuy registerChild unregisterChild);
 
-( $VERSION ) = '$Revision: 1.5 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 1.6 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 # Preloaded methods go here.
 
@@ -163,7 +162,8 @@ sub close
 
     print "closing connection\n";
     $self->{selector}->remove($self->{mySocket}) ;
-    $self->{mySocket}->close ;
+    #$self->{mySocket}->close ;
+    shutdown($self->{mySocket},2) ;
   }
 
 sub readClient
@@ -175,24 +175,6 @@ sub readClient
 
     return 0 if ($self->{mySocket}->eof) ;
 
-    # read length
-    # 	my $ls= '' ;
-    # 	my $res = sysread(CLIENT, $ls, 6 , 0 ) ;
-    # 	unless (defined $res )
-    # 	  {
-    # 		print "Error: can't read length $!\n";
-    # 	  } 
-    # 	print "$ls bytes to read\n" ;
-	
-    # 	my $length = 0 ;
-    # 	$length+=$ls;
-    # 	my $code = '' ;
-    # 	$res = sysread(CLIENT , $code, $length , 0 ) ;
-    # 	unless (defined $res )
-    # 	  {
-    # 		print "Error: can't read code $!\n";
-    # 	  } 
-	
     my @codeTab = () ;
 
     my $code = '' ;
@@ -217,14 +199,8 @@ sub readClient
           {
             $codeEnd = 0 ;
           }
-        
-        #		my $dummy=''; ;
-	#	my $recvRet = recv(CLIENT,$dummy,1,MSG_PEEK) ;
-		#unless (defined $recvRet) {warn "recv error $!" ; return 0;}
-	#	last if (length($dummy) == 0 and $line =~ /#end_buffer/
-        #		);
       }
-	
+
     foreach $code (@codeTab)
       {
         my ($args,$method,$reqId,$handle,$objectName) ;
@@ -237,7 +213,7 @@ sub readClient
           } 
 
         eval($code) ;
-        
+
         if ($@)
           {
             print "failed eval ($@) of :\n",$code,"end evaled code\n"  ; 
@@ -245,7 +221,7 @@ sub readClient
         else
           {
             print "Call $method \n" if $verbose ;
-			 
+
             if ($method eq 'new')
               {
                 # create new object, call-back always required
@@ -351,13 +327,7 @@ sub new
     fcntl($socket,F_SETFL, O_NDELAY)  || die "fcntl failed $!\n";
 
     logmsg "connection from $name [ $ipadr ] ";
-    
-    # 	$rio = register_io_client([],'r',$client,\&readClient,
-    # 								 \&dummy,\&dummy
-    # 						  ) || warn "client reg failed\n"; ;
 
-    #print "Listening to client \n";
-    
     return $self ;
   }
 
@@ -376,6 +346,40 @@ sub resetMask
     delete $fhTab{$nb} ;
   }
 
+sub checkDead
+  {
+    if (scalar  %deadChildren )
+      {
+        my $pid ;
+        foreach $pid (keys %deadChildren)
+          {
+            my ($ref,$out) = @{$deadChildren{$pid}};
+            $ref->processOver($out) ;
+            delete $deadChildren{$pid} ;
+          }
+      }
+  }
+
+sub getFileno
+  {
+    my $self = shift ;
+    return $self->{mySocket}->fileno ;
+  }
+
+sub goodGuy
+  {
+    my $good = shift ;
+
+    if ($good =~ /^[\d\.]+$/)
+      {
+        push @buddies , $good ;
+      }
+    else
+      {
+        my $addr = gethostbyname($good) ;
+        push @buddies, $addr ;
+      }
+  }
 
 1;
 __END__
@@ -485,37 +489,3 @@ perl(1).
 
 =cut
 
-sub checkDead
-  {
-    if (scalar  %deadChildren )
-      {
-        my $pid ;
-        foreach $pid (keys %deadChildren)
-          {
-            my ($ref,$out) = @{$deadChildren{$pid}};
-            $ref->processOver($out) ;
-            delete $deadChildren{$pid} ;
-          }
-      }
-  }
-
-sub getFileno
-  {
-    my $self = shift ;
-    return $self->{mySocket}->fileno ;
-  }
-
-sub goodGuy
-  {
-    my $good = shift ;
-
-    if ($good =~ /^[\d\.]+$/)
-      {
-        push @buddies , $good ;
-      }
-    else
-      {
-        my $addr = gethostbyname($good,AF_INET) ;
-        push @buddies, $addr ;
-      }
-  }
