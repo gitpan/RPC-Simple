@@ -22,8 +22,9 @@ print "ok 1\n";
 $SIG{CHLD} = \&childDeath ;
 
 package MyLocal ;
-use vars qw($VERSION @ISA) ;
+use vars qw($VERSION @ISA @RPC_SUB $tempObj) ;
 @ISA = qw(RPC::Simple::AnyLocal);
+@RPC_SUB = qw(close remoteHello remoteAsk);
 
 sub new 
   {
@@ -38,6 +39,7 @@ sub new
     return $self ;
   }
 
+# this routine is known by the remote class and is actually called by it
 sub implicitAnswer
   {
     my $self = shift ;
@@ -46,6 +48,8 @@ sub implicitAnswer
     print "implicit answer is $result\n" ;
   }
   
+# this routine is not knwon from the remote class and will be called only
+# by the call-back mechanism.
 sub answer
   {
     my $self = shift ;
@@ -53,6 +57,7 @@ sub answer
 
     print "answer is $result\n" ;
   }
+
 
 package main ;
 
@@ -63,33 +68,54 @@ use RPC::Simple::Factory ;
 my $arg = shift ;
 my $clientPid ;
 
+my $verbose = 0 ; # you may change this value to see RPC traffic
+
 if (not defined $arg)
   {
-    my $pid = &spawn ; # spawn server
+    my $pid = &spawn(undef,$verbose) ; # spawn server
   }
 elsif ($arg eq '-s')
   {
-    RPC::Simple::Server::mainLoop () ;
+    RPC::Simple::Server::mainLoop (undef,$verbose) ;
   }
 
 # client part
 my $mw = MainWindow-> new ;
-my $verbose = 1 ;
 # create factory
 my $factory = new RPC::Simple::Factory($mw,\$verbose) ;
 my $local = new MyLocal($factory) ;
+
+
 $mw -> Button (text => 'quit', command => sub {exit;} ) -> pack ;
 $mw -> Button (text => 'remote hello', 
                command => sub {$local->remoteHello();} ) -> pack ;
 $mw -> Button (text => 'remote query', 
                command => sub 
                {
-                 $local->remoteAsk('callback' => sub{$local->answer(@_)});
+                 $local->remoteAsk(sub{$local->answer(@_)});
                } ) -> pack ;
 $mw -> Button (text => 'remote query, implicit answer', 
                command => sub 
                {
                  $local->remoteAsk();
+               } ) -> pack ;
+
+my $queryb = 
+  $mw -> Button (text => 'remote query on new object', 
+                 state => 'disabled',
+                 command => sub 
+                 {$tempObj->remoteAsk(sub{$tempObj->answer(@_)});} ) -> pack ;
+$mw -> Button (text => 'create new object', 
+               command => sub 
+               {
+                 $tempObj =  new MyLocal($factory) ;
+                 $queryb->configure( state => 'active');
+               } ) -> pack ;
+$mw -> Button (text => 'delete new object', 
+               command => sub 
+               {
+                 $tempObj->destroy ; undef $tempObj;
+                 $queryb->configure( state => 'disabled');
                } ) -> pack ;
 MainLoop ; # Tk's
 

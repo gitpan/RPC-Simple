@@ -85,6 +85,14 @@ sub newRemoteObject
     return $handle ;
   }
 
+sub destroyRemoteObject
+  {
+    my $self=shift ;
+    my $idx = shift ;
+    $self->writeSockBuffer($idx, 'destroy' );    
+    delete $self->{handleTab}{$idx} ;
+  }
+
 sub getRemoteHostName
   {
     my $self=shift ;
@@ -226,12 +234,15 @@ sub readSock
 # static method. spawn a server
 sub spawn
   {
+    my $port = shift ;
+    my $verbose = shift ;
+
     $serverPid = fork ;
 
     if ($serverPid == 0)
       {
         # I am a server now 
-        RPC::Simple::Server::mainLoop () ;
+        RPC::Simple::Server::mainLoop ($port,$verbose) ;
         exit ; # well I should never go there
       }
     print "spawned server pid $serverPid\n" ; # don't use verbose
@@ -320,7 +331,7 @@ Note that there's no security implemented (yet).
 
 =head1 Static functions
 
-=head2 spawn
+=head2 spawn([port],[verbose])
 
 Will spawn a RPC::Simple server on your machine. Don't call this function if
 you need to do RPC on a remote machine.

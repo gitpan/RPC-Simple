@@ -39,7 +39,7 @@ sub new
       } 
     else
       {
-        print "Creating object controler for $objName\n" if $main::verbose ;
+        print "Creating object controller for $objName\n" if $main::verbose ;
         eval { $self->{objRef} = $objName -> new ($self, @$args) };
 
         if ($@)
@@ -55,9 +55,18 @@ sub new
     return $self ;
   }
 
-sub DESTROY
+sub destroy
   {
     my $self=shift;
+    delete $self->{objRef} ;
+
+    if (defined $self->{requestTab})
+      {
+        foreach (values %{$self->{requestTab}})
+          {
+            $_->destroy ;
+          }
+      }
     print "ObjectHandler for $self->{slaveClass} destroyed\n";
   }
 
@@ -97,8 +106,6 @@ sub delegate
     my $self = shift ;
     my $method = shift ;
     my $args = \@_ ;
-    
-    return if ($method eq 'DESTROY' or $method eq 'close') ;
     
     print "delegate called by real object for $method\n" if $main::verbose ;
     $self->{server}-> writeSock($self->{handle},$method,undef,$args) ;
@@ -157,7 +164,7 @@ The connection server is passed with server_ref
 Will call the slave object with method method_name and the arguments.
 
 If request_id is defined, it means that a call-back is expected. In this case,
-the argument passed should contains 'callback' => call_back_method.
+the argument passed should contains a sub reference.
 
 =head2 close
 

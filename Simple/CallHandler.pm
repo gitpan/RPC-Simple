@@ -12,31 +12,39 @@ use vars qw($VERSION);
 # Autoload methods go after =cut, and are processed by the autosplit program.
 sub new
   {
-	my $type = shift ;
-	my $self = {} ;
-
-	$self->{controlRef} = shift ;
-	$self->{objRef} = shift ;
-	$self->{reqId} = shift ;
-	my $method = shift ;
-	my $args = shift ;
-	
-	print "Creating call handler\n" if $main::verbose ;
-	bless $self,$type ;
-	
-	$self->{objRef} -> $method ('callback'=> sub {$self->done(@_);} , 
-                                    @$args) ;
-	return $self ;
+    my $type = shift ;
+    my $self = {} ;
+    
+    $self->{controlRef} = shift ;
+    $self->{objRef} = shift ;
+    $self->{reqId} = shift ;
+    my $method = shift ;
+    my $args = shift ;
+    
+    print "Creating call handler\n" if $main::verbose ;
+    bless $self,$type ;
+    
+    $self->{objRef} -> $method (sub {$self->done(@_);} , @$args) ;
+    return $self ;
   }
 
 sub done 
   {
-	my $self = shift ;
-	
-	print "done called\n" if $main::verbose ;
-	$self->{controlRef} -> callbackDone ($self->{reqId}, @_ ) ;
+    my $self = shift ;
+    
+    print "done called\n" if $main::verbose ;
+    $self->{controlRef} -> callbackDone ($self->{reqId}, @_ ) ;
+    $self->destroy ;
   }
 
+sub destroy
+  {
+    my $self = shift ;
+    print "CallHandler destroyed\n" if $main::verbose ;
+    delete $self->{controlRef} ;
+    delete $self->{objRef} ;
+    delete $self->{reqId} ;
+  }
 
 1;
 __END__
@@ -65,8 +73,8 @@ pass a result immediately, it will have to call-back this handler.
 Call the remote_object methods with a call-back parameter and the passed 
 arguments, store the handler ref.
 
-Note that the called method must be able to handle these parameters:
-'callback' => \&call_back_function.
+Note that the called method must be able to handle a sub ref  parameter.
+This sub must be called when the function is over.
 
 Usually the call-back function will be a closure.
 

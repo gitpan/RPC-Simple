@@ -8,5 +8,11 @@ Revision history for Perl extension SRPC
         with make install.
 
 0.3 97/12/2
-        - Simplified Anyremote. Fixed some bugs, better tests
+        - Simplified AnyRemote. Fixed some bugs, better tests
  
+0.4 97/12/31
+        - added RPC_SUB arrays to avoid infinite loop between local and 
+        remote when a function is unknown.
+        - remote the 'callback' string. Now when the first parameter is a
+        subroutine reference, Agent store the reference and the subroutine
+        will be called when the remote call is over.

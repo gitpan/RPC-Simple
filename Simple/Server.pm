@@ -25,7 +25,6 @@ use AutoLoader 'AUTOLOAD';
 @EXPORT = qw(mainLoop chilDeath goodGuy registerChild unregisterChild);
 
 $VERSION = '0.01';
-$verbose = 1 ;
 
 # Preloaded methods go here.
 
@@ -60,6 +59,7 @@ sub logmsg { print "$0 $$: @_ at ", scalar localtime, "\n" }
 sub mainLoop
   {
     my $port = shift || 7810 ;
+    $verbose = shift || 0 ; 
 
     my $clientOpen = 0 ;
     
@@ -96,8 +96,6 @@ sub mainLoop
       { 
         my ($toRead,$dummy,$shutThem) = IO::Select -> 
           select ($s ,undef, $s, 2) ;
-
-        print "looping\n";
 
         foreach my $fh (@$shutThem)
           {
@@ -256,7 +254,7 @@ sub readClient
               }
             elsif ($method eq 'destroy')
               {
-                # create new object, call-back always required
+                $self->{handleTab}{$handle}->destroy ;
                 delete $self->{handleTab}{$handle} ;
               }
             else

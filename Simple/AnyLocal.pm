@@ -1,16 +1,19 @@
 package RPC::Simple::AnyLocal;
 
 use strict;
-use vars qw($VERSION $AUTOLOAD);
+
+use vars qw(@ISA $VERSION %_RPC_SUBS);
 
 use RPC::Simple::Agent ;
+use RPC::Simple::AnyWhere ;
 
 # Items to export into callers namespace by default. Note: do not export
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
 $VERSION = '0.01';
-
+@ISA = qw(RPC::Simple::AnyWhere) ;
+*_RPC_SUBS=*RPC::Simple::AnyWhere::_RPC_SUBS;
 # Preloaded methods go here.
 
 # We may need a mechanism to declare the functions vailable on the remote
@@ -25,31 +28,28 @@ sub createRemote
     die "No factory object given to ",ref($self),"->createRemote\n"
       unless defined $factory ;
 
+    # construct an array of existing remote functions and store it in the
+    # child class name space (rude but necessary behavior)
+    unless (defined $_RPC_SUBS{ref($self)})
+      {
+        $self->_searchSubs(ref($self)) ;
+      }
+
     # create real process object
-    $self->{remoteHandle} = 
+    $self->{_twinHandle} = 
       $factory->newRemoteObject($self, $remoteClass, @_ ) ;
     
-    $self->{remoteHostName} = $self->{remoteHandle}->getRemoteHostName() ;
+    $self->{remoteHostName} = $self->{_twinHandle}->getRemoteHostName() ;
+
     return $self ;
   }
 
-sub AUTOLOAD
+sub destroy
   {
     my $self = shift ;
-	
-    my $called = $AUTOLOAD ;
-    return if $called =~ /::DESTROY$/ ;
-
-    $called =~ s/.*::// ;
-
-    $self->{remoteHandle}->delegate($called,@_) ;
-    return $self ;
-  }
-
-sub DESTROY
-  {
-    my $self = shift ;
-    print "class ",ref($self)," destroyed \n";
+    print "AnyLocal object destroyed\n" ;
+    $self->{_twinHandle}->destroy;
+    undef $self->{_twinHandle} ;
   }
 
 # Autoload methods go after =cut, and are processed by the autosplit program.
@@ -67,8 +67,9 @@ RPC::Simple::AnyLocal - Perl extension defining a virtual SRPC client class
  package MyLocal ;
 
  use RPC::Simple::AnyLocal;
- use vars qw($VERSION @ISA) ;
+ use vars qw($VERSION @ISA @RPC_SUB) ;
  @ISA = qw(RPC::Simple::AnyLocal);
+ @RPC_SUB = qw(remoteHello remoteAsk);
 
  sub new
   {
@@ -114,6 +115,10 @@ facility.
 Note that this class (and the Factory class) was designed to use Tk's 
 fileevent facilities.
 
+The child object must declare in the @RPC_SUB array the name of the methods
+available on the remote side.
+
+
 =head1 Methods
 
 =head2 createRemote(factory_object_ref, [remote_class_name], ... )
@@ -135,20 +140,27 @@ during its creation.
 
 returns self.
 
+=head2 destroy()
+
+Objects derived from AnyLocal must be explicitely destroy. If you just undef
+the object reference, you will not release the memory and the remote object
+will not be destroyed.
+
 =head2 AUTOLOAD()
 
 When this method is called (generally through perl mechanism), the call will
-be forwarded with all parameter to the remote object. If the parameters
-are  :
-
-'callback' => \$one_callback 
+be forwarded with all parameter to the remote object. If the first parameters
+is  : \&one_callback 
 
 the function &one_callback will be called when the remote side has finished
 its function. 
 
 If you want to call-back an object method, use a closure. Such as
 
- $self->remote_method('callback' => sub {$self-> finished(@_)})
+ $self->remote_method(sub {$self-> finished(@_)})
+
+Note that if the remote method name is not declared in the @RPC_SUB array, 
+AnyLocal will try to autoload this method.
 
 returns self.
 
@@ -156,18 +168,13 @@ returns self.
 
 AnyLocal will create the following instance variables:
 
-=head2 remoteHandle
+=head2 _twinHandle
 
 Will contains the ref of the RPC::Simple::Agent object.
 
 =head2 remoteHostName
 
 Will contains the name of the remote host.
-
-=head1 CAVEATS
-
-I have not yet tested how to use this class and the AutoLoader in the same
-child class. This may lead to 'intersting' side effects.
 
 =head1 AUTHOR
 

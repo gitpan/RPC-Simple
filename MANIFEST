@@ -1,5 +1,5 @@
 Changes
-lib/Simple.pm
+Simple.pm
 Simple/Agent.pm
 Simple/AnyLocal.pm
 Simple/Factory.pm
@@ -7,6 +7,7 @@ Simple/Server.pm
 Simple/ObjectHandler.pm
 Simple/CallHandler.pm
 Simple/AnyRemote.pm
+Simple/AnyWhere.pm
 MANIFEST
 Makefile.PL
 test.pl

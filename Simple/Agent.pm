@@ -51,10 +51,11 @@ sub new
     bless $self, $type ;
   }
 
-sub DESTROY
+sub destroy
   {
     my $self = shift ;
-    $self->{factory}->writeSockBuffer($self->{'idx'}, 'destroy' );    
+    print "RPC::Simple::Agent destroyed\n";
+    $self->{factory}->destroyRemoteObject($self->{'idx'});    
   }
 
 sub delegate
@@ -62,15 +63,11 @@ sub delegate
     # delegate to remote
     my $self = shift ;
     my $method = shift ;
-    my $param = $_[0] ;
     my $id ;
     
-    if ($param eq 'callback')
+    if (ref($_[0]) eq 'CODE')
       {
         # callback required
-        print "delegate: $method will lead to a call-back\n";
-        shift ;                 # remove param from array
-                                # callback given, clientObj already known
         $self->{callback}{$self->{requestId}} = shift ; # store call-back info
         $id = $self->{requestId}++ ;
       }
@@ -113,7 +110,7 @@ sub treatCallBack
     my $self = shift ;
     my $reqId = shift ;
     my $args = shift ;
-    print "treatCallback called for request $reqId\n";
+
     my $cbRef = $self->{callback}{$reqId} ;
 
     &$cbRef(@$args);
@@ -171,11 +168,11 @@ class.
 
 returns the remote host name
 
-=head2 delegate( method_name , ['callback' => function_ref ],
+=head2 delegate( method_name , [code_ref ],
                 parameters ,... )
 
-Call a method of the remote object. If call back is specified, the call
-back will be called with whatever parameters the remote functions passed
+Call a method of the remote object. If code_ref is specified, the code
+ will be executed with whatever parameters the remote functions passed
 in its reply.
 
 The remaining optionnal parameters are passed as is to the remote method.

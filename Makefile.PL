@@ -3,7 +3,7 @@ use ExtUtils::MakeMaker;
 # the contents of the Makefile that is written.
 WriteMakefile(
               'NAME'	=> 'RPC::Simple',
-              'VERSION'   => '0.3',
+              'VERSION'   => '0.4',
               'dist' => {COMPRESS=>'gzip -9f', SUFFIX => 'gz'},
               'PREREQ_PM' =>
               {
