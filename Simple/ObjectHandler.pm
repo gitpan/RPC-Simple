@@ -1,37 +1,64 @@
 package RPC::Simple::ObjectHandler;
 
 use strict;
-use vars qw($VERSION @ISA @EXPORT);
+use vars qw($VERSION);
 
 use RPC::Simple::CallHandler ;
 
-require Exporter;
-require AutoLoader;
-
-@ISA = qw(Exporter AutoLoader);
 # Items to export into callers namespace by default. Note: do not export
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
-@EXPORT = qw(
-	
-);
+
 $VERSION = '0.01';
 
 sub new
   {
     my $type = shift ;
     my $self = {} ;
+    bless $self,$type ;
     
     $self->{server} = shift ;
     my $objName = shift ;
     $self->{handle} = shift ;
     my $args = shift ;
+    my $reqId = shift ;
     
-    print "Creating object controler for $objName\n" if $main::verbose ;
+    my $result = 1 ;
     
-    $self->{objRef} = $objName -> new ($self, @$args) ;
+    my $fileName = $objName ;
+    # remove prefix for objName
+    $fileName .= '.pm' unless $fileName =~ /\./ ;
+    $objName =~ s/\.\w*$// ;
 
-    bless $self,$type ;
+    eval { require $fileName ; import $objName } ;
+
+    if ($@)
+      {
+        print "Can't load $objName: $@\n" ;
+        $result = 0 ;
+      } 
+    else
+      {
+        print "Creating object controler for $objName\n" if $main::verbose ;
+        eval { $self->{objRef} = $objName -> new ($self, @$args) };
+
+        if ($@)
+          {
+            print "Can't create $objName: $@\n" ;
+            $result = 0 ;
+          } 
+      }
+
+    $self->{slaveClass} = $objName ;
+
+    $self->callbackDone($reqId,$result,$@) ;
+    return $self ;
+  }
+
+sub DESTROY
+  {
+    my $self=shift;
+    print "ObjectHandler for $self->{slaveClass} destroyed\n";
   }
 
 sub remoteCall
@@ -74,17 +101,16 @@ sub delegate
     return if ($method eq 'DESTROY' or $method eq 'close') ;
     
     print "delegate called by real object for $method\n" if $main::verbose ;
-    $self->{serverRef}-> writeSock($self->{handle},$method,undef,$args) ;
+    $self->{server}-> writeSock($self->{handle},$method,undef,$args) ;
   }
 
 sub callbackDone 
   {
     my $self = shift ;
     my $reqId = shift ;
-    my $result = shift ;
     
     print "callbackDone called\n" if $main::verbose ;
-    $self->{server}->writeSock($self->{handle},undef,$reqId,[$result]) ;
+    $self->{server}->writeSock($self->{handle},undef,$reqId,[@_]) ;
   }
 
 # Preloaded methods go here.
@@ -102,36 +128,40 @@ RPC::Simple::ObjectHandler - Perl class to handle a remote object
 =head1 SYNOPSIS
 
   use RPC::Simple::ObjectHandler;
-  blah blah blah
+
 
 =head1 DESCRIPTION
 
-Stub documentation for RPC::Simple::ObjectHandler was created by h2xs. It looks like the
-author of the extension was negligent enough to leave the stub
-unedited.
+This class is instanciated by RPS::Simple::Server each time a remote
+object is created. All is handled by the server, the user need not to
+worry about it.
 
-Blah blah blah.
-
-=head1 new (server_ref, object_name, agent_id, argument_array_ref)
+=head1 new (server_ref, object_name, agent_id, argument_array_ref, req_id)
 
 Creates a new object controller. Also creates a new object_name which
-is remotely controlled by the agent referenced by agent_id.
+is remotely controlled by the agent referenced by agent_id. If object name 
+has no suffix, new will 'require' object_name.pm
 
 The new method of the slave object will be passed the argument stored
-in array_ref
+in argument_array_ref.
+
+req_id is used for calling back the agent once the object is created 
+(either with success ot not)
 
 The connection server is passed with server_ref
 
 =head1 METHODS
 
-=head2 remoteCall( [request_id], method_name, arguments )
+=head2 remoteCall( request_id | undef , method_name, arguments )
 
 Will call the slave object with method method_name and the arguments.
 
-If request_id is defined, it means that a call-back is expexted. In this case,
+If request_id is defined, it means that a call-back is expected. In this case,
 the argument passed should contains 'callback' => call_back_method.
 
 =head2 close
+
+Cancel all pending requests and delete itself.
 
 =head2 delegate(method_name, ... )
 
@@ -144,10 +174,10 @@ is over. $result being the result of this function.
 
 =head1 AUTHOR
 
-A. U. Thor, a.u.thor@a.galaxy.far.far.away
+Dominique_Dumont@hp.com
 
 =head1 SEE ALSO
 
-perl(1).
+perl(1)
 
 =cut

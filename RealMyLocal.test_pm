@@ -1,0 +1,43 @@
+package RealMyLocal ;
+
+use vars qw($VERSION @ISA) ;
+@ISA = qw(RPC::Simple::AnyRemote);
+
+sub close 
+  {
+    my $self = shift ;
+    print "close called on ",ref($self),"\n";
+  }
+
+sub remoteHello
+  {
+    my $self=shift ;
+    print "Remote said 'Hello world'\n";
+  }
+
+sub remoteAsk
+  {
+    my $self=shift ;
+    my $param = shift ;
+    my $callback ;
+
+    if ($param eq 'callback')
+     {
+       # callback required
+       $callback = shift          
+     }
+    print "Local asked me to say hello\n";
+
+   unless (defined $callback)
+     {
+       # direct call to a local method
+       $self->implicitAnswer("Hello local object");
+       return ;
+     }
+
+    # emulate a delayed call-back
+    &$callback("Hello local object" ) ;
+
+  }
+
+1;

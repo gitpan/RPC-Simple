@@ -1,14 +1,10 @@
 package RPC::Simple::Agent;
 
 use strict;
-use vars qw($VERSION @ISA @EXPORT);
+use vars qw($VERSION);
 
 use RPC::Simple::Factory ;
 
-require Exporter;
-require AutoLoader;
-
-@ISA = qw(Exporter AutoLoader);
 # Items to export into callers namespace by default. Note: do not export
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
@@ -22,55 +18,43 @@ $VERSION = '0.01';
 sub new
   {
     my $type = shift ;
-    my $sockObj = shift ;       # factory
-    my $objRef = shift;
-    my $specRef = shift ;
-    my $cspecRef = shift ;
-    my $optHash = shift ;
-    
+    my $factoryObj = shift ;       # factory
+    my $clientRef = shift;
+    my $index  = shift ;
+    my $remoteClass = shift ; # may be undef
+
     my $self={} ;
-    $self->{'idx'} = shift ;
+    $self->{'idx'} = $index ;
     
     $self->{requestId} = 0 ;
     
-    $self->{'socket'} = $sockObj ;
-    $self->{remoteHostName} = $sockObj->getRemoteHostName() ;
-    my $objName = ref($objRef) ;
-    $objName =~ s/(\w+)$/Real$1/ ;
-    
-    print "Creating $type for $objName\n";
-    
-    $self->{'processObj'}= $objRef ;
-    
-    # merge spec and context specs and optHash
-    my $hash ;
-    if (defined $cspecRef)
+    $self->{'factory'} = $factoryObj ;
+    $self->{remoteHostName} = $factoryObj->getRemoteHostName() ;
+
+    unless (defined $remoteClass)
       {
-        %$hash = (%$cspecRef, %$specRef) ; # spec must overload context values
+        $remoteClass = ref($clientRef) ;
+        $remoteClass =~ s/(\w+)$/Real$1/ ;
       } 
-    else
-      {
-        $hash = $specRef ;
-      }
     
-    if (defined $optHash)
-      {
-        foreach (keys %$optHash)
-          {
-            $hash->{$_} = $optHash->{$_} ;
-          }
-      }
+    print "Creating $type for $remoteClass\n";
     
-    $sockObj->writeSockBuffer($self->{'idx'}, 'new', undef ,
-                              [ $hash ], $objName ) ;
+    $self->{'clientObj'}= $clientRef ;
+
+    # store call-back info
+    $self->{callback}{$self->{requestId}} = sub{ $self->remoteCreated(@_)} ; 
+    my $id = $self->{requestId}++ ;
     
+    $factoryObj->writeSockBuffer($index, 'new', $id , [ @_ ], $remoteClass ) ;
+    
+    $self->{remoteClass} = $remoteClass ;
     bless $self, $type ;
   }
 
-sub getRemoteHostName
+sub DESTROY
   {
-    my $self =shift ;
-    return $self->{'remoteHostName'} ;
+    my $self = shift ;
+    $self->{factory}->writeSockBuffer($self->{'idx'}, 'destroy' );    
   }
 
 sub delegate
@@ -86,12 +70,28 @@ sub delegate
         # callback required
         print "delegate: $method will lead to a call-back\n";
         shift ;                 # remove param from array
-                                # callback given, processObj already known
+                                # callback given, clientObj already known
         $self->{callback}{$self->{requestId}} = shift ; # store call-back info
         $id = $self->{requestId}++ ;
       }
     
-    $self->{'socket'}->writeSockBuffer($self->{'idx'},$method, $id,[ @_]) ;
+    $self->{'factory'}->writeSockBuffer($self->{'idx'},$method, $id,[ @_]) ;
+  }
+
+sub remoteCreated
+  {
+    my $self = shift ;
+    my $result = shift ;
+    my $failStr = shift ;
+
+    if ($result)
+      {
+        print "Remote class $self->{remoteClass} created\n";
+        return ;
+      }
+    
+    print "Failed to create remote class $self->{remoteClass}\n",$failStr;
+    undef $self->{clientObj} ;
   }
 
 sub callMethod
@@ -99,7 +99,13 @@ sub callMethod
     my $self = shift ;
     my $method = shift ;
     my $args = shift ;
-    $self->{processObj} -> $method (@$args) ;
+    $self->{clientObj} -> $method (@$args) ;
+  }
+
+sub getRemoteHostName
+  {
+    my $self = shift ;
+    return $self->{'remoteHostName'} ;
   }
 
 sub treatCallBack
@@ -110,17 +116,7 @@ sub treatCallBack
     print "treatCallback called for request $reqId\n";
     my $cbRef = $self->{callback}{$reqId} ;
 
-    if (ref $cbRef eq 'ARRAY')
-      {
-        my @lcb = @$cbRef ;
-        my $ref = shift @lcb;
-        my $meth = shift @lcb;
-        $ref-> $meth (@lcb, @$args) ; # canonical callback method
-      }
-    else
-      {
-        &$cbRef(@$args);
-      }
+    &$cbRef(@$args);
     
     delete $self->{callback}{$reqId} ;
   }
@@ -129,12 +125,14 @@ sub treatCallBack
 # Autoload methods go after =cut, and are processed by the autosplit program.
 
 1;
+
 __END__
+
 # Below is the stub of documentation for your module. You better edit it!
 
 =head1 NAME
 
-RPC::Simple::Agent - Perl extension for an agent object for SRPC
+RPC::Simple::Agent - Perl extension for an agent object for RPC
 
 =head1 SYNOPSIS
 
@@ -142,14 +140,16 @@ RPC::Simple::Agent - Perl extension for an agent object for SRPC
 
 =head1 DESCRIPTION
 
-This class is an agent for client class inheriting SPRC::Any. This
+This class is an agent for client class inheriting PRC::AnyLocal. This
 class will handle all the boring stuff to create, access store call-back 
 when dealing with the remote object.
 
-This class should not be used directly. RPC::Simple::AnyLocal will deal with it.
+Casual user should not worry about this class. RPC::Simple::AnyLocal 
+will deal with it.
 
-=head1 new( $factory_ref, client_ref, spec_ref, context_spec_ref, 
-            optionnal_hash_ref )
+=head1 Methods
+
+=head2 new( $factory_ref, client_ref, index, remote_class, ... .)
 
 Create the agent. 
 
@@ -157,37 +157,45 @@ factory_ref is the SPRC::Factory object.
 
 client_ref is the client object itself.
 
-context_ref and spec_ref and optionnal_hash_ref are 3 hash containing 
-relevant info tor the remote object.
+index is an index handled by the Factory.
 
-The content of these hash are merged
-in that order (i.e. the first values may be clobberred) before the remote 
-object is created.
+remote_class if the name of the class created on the remote side. By default,
+it is set to the client's class name with a 'Real' prepended to the name.
 
-TBD: Whether it's a good idea to merge these hashes or not.
+I.e if the client is Foo::Bar, the remote will be Foo::RealBar.
 
-=head1 Methods
+The remaining parameters will forwarded to the constructor of the remote
+class.
 
 =head2 getRemoteHostName
 
 returns the remote host name
 
-=head2 delegate( method_name , ['callback' => funref | [$obj, 'method'] ],
-                parameter ,... )
+=head2 delegate( method_name , ['callback' => function_ref ],
+                parameters ,... )
 
 Call a method of the remote object. If call back is specified, the call
 back will be called with whatever parameters the remote functions passed
 in its reply.
 
-optionnal parameters are passed as is to the remote.
+The remaining optionnal parameters are passed as is to the remote method.
 
 Note that ref are copied. You can't expect the remote to be able to modify
-a client's variable because you passed it's ref to the remote. nuff' said.
+a client's variable because you passed it's ref to the remote. 
 
 =head2 callMethod( method_name, argument_array_ref )
 
 Function used to call the owner of the agent. All arguments of the 
 function to be called back are passed in the array ref.
+
+=head1 CALLBACKS
+
+=head2 remoteCreated(result, string)
+
+Called when the remote object is created. 'result' will be true or false 
+depending on whether the remote object was created or not.
+
+'string' contains the error message in case of a failure.
 
 =head2 treatCallBack ( request_id, argument_array_ref)
 

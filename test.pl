@@ -8,6 +8,7 @@
 
 BEGIN { $| = 1; print "1..1\n"; }
 END {print "not ok 1\n" unless $loaded;}
+use ExtUtils::testlib ;
 use RPC::Simple ;
 $loaded = 1;
 print "ok 1\n";
@@ -33,10 +34,18 @@ sub new
     my $remote =  shift ; 
     bless $self,$type ;
 
-    $self->createRemote($remote) ;
+    $self->createRemote($remote,'RealMyLocal.test_pm') ;
     return $self ;
   }
 
+sub implicitAnswer
+  {
+    my $self = shift ;
+    my $result = shift ;
+
+    print "implicit answer is $result\n" ;
+  }
+  
 sub answer
   {
     my $self = shift ;
@@ -45,103 +54,42 @@ sub answer
     print "answer is $result\n" ;
   }
 
-package RealMyLocal ;
-
-use vars qw($VERSION @ISA) ;
-@ISA = qw(RPC::Simple::AnyRemote);
-
-sub new 
-  {
-    my $type = shift ;
-    
-    print "creating $type\n";
-
-    my $self = {} ;
-    bless $self,$type ;
-  }
-
-sub close 
-  {
-    my $self = shift ;
-    print "close called on ",ref($self),"\n";
-  }
-
-sub remoteHello
-  {
-    my $self=shift ;
-    print "Remote said 'Hello world'\n";
-  }
-
-sub remoteAsk
-  {
-    my $self=shift ;
-    my $param = shift ;
-    my $callback ;
-
-    if ($param eq 'callback')
-     {
-       # callback required
-       $callback = shift          
-     }
-    print "Local asked me to say hello\n";
-
-   return unless defined $callback ;
-
-   my ($obj,$method) = @$callback ;
-   $obj -> $method ( "Hello local object" );
-  }
-
 package main ;
+
 use Tk ;
 use RPC::Simple::Server ;
+use RPC::Simple::Factory ;
 
 my $arg = shift ;
 my $clientPid ;
 
-if (not defined $arg )
+if (not defined $arg)
   {
-    $serverPid = fork ;
-  }
-elsif ($arg eq '-c')
-  {
-    $serverPid = 1 ;
+    my $pid = &spawn ; # spawn server
   }
 elsif ($arg eq '-s')
   {
-    $serverPid = 0 ;
+    RPC::Simple::Server::mainLoop () ;
   }
 
-if ($serverPid != 0)
-  {
-    sleep 4 unless $arg eq '-c' ; # let the server start ...
-    # client part
-    my $mw = MainWindow-> new ;
-    my $verbose = 1 ;
-    # create fatory
-    my $factory = new RPC::Simple::Factory($mw,\$verbose) ;
-    my $local = new MyLocal($factory) ;
-    $mw -> Button (text => 'quit', command => 
-                   sub 
-                   { print "Killing process $serverPid\n";
-                     kill KILL,$serverPid; 
-                     exit;} ) -> pack ;
-    $mw -> Button (text => 'remote hello', 
-                   command => sub {$local->remoteHello();} ) -> pack ;
-    $mw -> Button (text => 'remote query', 
-                   command => sub 
-                   {
-                     $local->remoteAsk('callback' => [$local, 'answer']);
-                   } ) -> pack ;
-    MainLoop ; # Tk's
+# client part
+my $mw = MainWindow-> new ;
+my $verbose = 1 ;
+# create factory
+my $factory = new RPC::Simple::Factory($mw,\$verbose) ;
+my $local = new MyLocal($factory) ;
+$mw -> Button (text => 'quit', command => sub {exit;} ) -> pack ;
+$mw -> Button (text => 'remote hello', 
+               command => sub {$local->remoteHello();} ) -> pack ;
+$mw -> Button (text => 'remote query', 
+               command => sub 
+               {
+                 $local->remoteAsk('callback' => sub{$local->answer(@_)});
+               } ) -> pack ;
+$mw -> Button (text => 'remote query, implicit answer', 
+               command => sub 
+               {
+                 $local->remoteAsk();
+               } ) -> pack ;
+MainLoop ; # Tk's
 
-    # create local class (which should create its agent)
-  }
-else
-  {
-    print "spawned server pid $serverPid\n" unless $arg eq '-s' ;;
-    #server part
-    mainLoop() ;
-    
-    #create server
-    # and listen
-  }

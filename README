@@ -18,10 +18,6 @@ But it works. (Although I'm opened to suggestion regarging the "un-
 proof" areas)
 
 
-This is Version 0.2.  (Version 0.1 did not install properly. How come
-nobody told me about that ? :-(   )
-
-
 This module was written with perl5.004. 
 
 See the embedded documentation in the module for more details.

@@ -1,5 +1,5 @@
 Changes
-Simple.pm
+lib/Simple.pm
 Simple/Agent.pm
 Simple/AnyLocal.pm
 Simple/Factory.pm
@@ -10,4 +10,5 @@ Simple/AnyRemote.pm
 MANIFEST
 Makefile.PL
 test.pl
+RealMyLocal.test_pm
 README

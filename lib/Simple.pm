@@ -51,6 +51,14 @@ The module is made of the following sub-classes :
  RPC::Simple::ObjectHandler - Perl class to handle a remote object
  RPC::Simple::Server - Perl class to use in the RPC::Simple server script.
 
+Anyway, the casual user should worry only about inheriting the 
+RPC::Simple::AnyLocal class and creating a RPC::Simple::Factory on the local
+side.
+
+On the remote side, the user will only have to inherit RPC::Simple::AnyRemote
+and run the mainLoop method of RPC::Simple::Server.
+
+
 
 How it works ? The user (i.e. you) must write a local class which inherit
 from AnyLocal. AnyLocal is designed to handle Agent and Factory.

@@ -16,13 +16,13 @@ use IO::Select ;
 use RPC::Simple::ObjectHandler ;
 
 require Exporter;
-require AutoLoader;
+use AutoLoader 'AUTOLOAD';
 
-@ISA = qw(Exporter AutoLoader);
+@ISA = qw(Exporter);
 # Items to export into callers namespace by default. Note: do not export
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
-@EXPORT = qw(mainLoop chilDeath);
+@EXPORT = qw(mainLoop chilDeath goodGuy registerChild unregisterChild);
 
 $VERSION = '0.01';
 $verbose = 1 ;
@@ -158,19 +158,6 @@ sub unregisterChild
 	delete $deadChildren{$pid} ;
   }
 
-sub checkDead
-  {
-    if (scalar  %deadChildren )
-      {
-        my $pid ;
-        foreach $pid (keys %deadChildren)
-          {
-            my ($ref,$out) = @{$deadChildren{$pid}};
-            $ref->processOver($out) ;
-            delete $deadChildren{$pid} ;
-          }
-      }
-  }
 
 sub close
   { 
@@ -263,9 +250,14 @@ sub readClient
 			 
             if ($method eq 'new')
               {
-				# create new object, no call-back required
-                $self->{handleTab}{$handle} = 
-                  RPC::Simple::ObjectHandler->new ($self,$objectName, $handle, $args) ;
+                # create new object, call-back always required
+                $self->{handleTab}{$handle} = RPC::Simple::ObjectHandler
+                  -> new ($self,$objectName, $handle, $args, $reqId) ;
+              }
+            elsif ($method eq 'destroy')
+              {
+                # create new object, call-back always required
+                delete $self->{handleTab}{$handle} ;
               }
             else
               {
@@ -311,26 +303,6 @@ sub writeSock
   }
 
 
-sub getFileno
-  {
-    my $self = shift ;
-    return $self->{mySocket}->fileno ;
-  }
-
-sub goodGuy
-  {
-    my $good = shift ;
-
-    if ($good =~ /^[\d\.]+$/)
-      {
-        push @buddies , $good ;
-      }
-    else
-      {
-        my $addr = gethostbyname($good,AF_INET) ;
-        push @buddies, $addr ;
-      }
-  }
 
 sub new 
   {
@@ -414,12 +386,13 @@ __END__
 
 =head1 NAME
 
-RPC::Simple::Server - Perl class to use in the SRPC server script.
+RPC::Simple::Server - Perl class to use in the RPC server script.
 
 =head1 SYNOPSIS
 
   use RPC::Simple::Server;
-  blah blah blah
+
+ my $server_pid = &spawn ;
 
 =head1 DESCRIPTION
 
@@ -475,7 +448,14 @@ param: array_ref of parameters passed to the call-back function.
 
 =head2 readClient
 
-Read the client's socket. returns 0 if the socket is closed.
+Read the client's socket. Execute the code passed through the socket and
+call the relevant object handlers.
+
+returns 0 if the socket is closed.
+
+=head2 close
+
+Close the connection.
 
 =head2 setMask(object,method, file_number)
 
@@ -494,12 +474,50 @@ Returns the fileno of the client's socket.
 
 =head1 CAVEATS
 
+Some function are provided to handle remote processes. These functions are
+not yet tested. They may not stay in this class either.
+
 =head1 AUTHOR
 
-D. Dumont
+Dominique_Dumont@hp.com
 
 =head1 SEE ALSO
 
 perl(1).
 
 =cut
+
+sub checkDead
+  {
+    if (scalar  %deadChildren )
+      {
+        my $pid ;
+        foreach $pid (keys %deadChildren)
+          {
+            my ($ref,$out) = @{$deadChildren{$pid}};
+            $ref->processOver($out) ;
+            delete $deadChildren{$pid} ;
+          }
+      }
+  }
+
+sub getFileno
+  {
+    my $self = shift ;
+    return $self->{mySocket}->fileno ;
+  }
+
+sub goodGuy
+  {
+    my $good = shift ;
+
+    if ($good =~ /^[\d\.]+$/)
+      {
+        push @buddies , $good ;
+      }
+    else
+      {
+        my $addr = gethostbyname($good,AF_INET) ;
+        push @buddies, $addr ;
+      }
+  }
