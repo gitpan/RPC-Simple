@@ -3,3 +3,6 @@ Revision history for Perl extension SRPC
 0.01  Thu May 15 13:39:29 1997
 	- original version; created by h2xs 1.16
 
+0.02 97/11/5
+        - Fixed problem with directory layout. It should install properly
+        with make install.

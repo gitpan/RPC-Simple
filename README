@@ -1,11 +1,28 @@
 This is the README file for SRPC::* , a bunch of Perl
 classes to perform simple remote procedure calls.
 
-This is Version 0.01.  See the "Changes" file for details on
-the new features and fixes in this release.
+I've tried to keep things simple.
 
-This mopule was written with perl5.004. 
+So this module should be :
+ - quite simple to use (thanks to autoload mechanisms)
+ - lightweight
 
+It sure is not :
+ - DCE
+ - CORBA
+ - bulletproof
+ - securityproof
+ - foolproof
+
+But it works. (Although I'm opened to suggestion regarging the "un-
+proof" areas)
+
+
+This is Version 0.2.  (Version 0.1 did not install properly. How come
+nobody told me about that ? :-(   )
+
+
+This module was written with perl5.004. 
 
 See the embedded documentation in the module for more details.
 
