@@ -10,7 +10,7 @@ use Carp ;
 
 require Exporter;
 
-( $VERSION ) = '$Revision: 1.7 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 1.9 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 @ISA = qw(Exporter);
 @EXPORT= qw(spawn) ;
@@ -104,7 +104,10 @@ sub DESTROY
       if defined $self->{tkTop} ;
 
     #$self->{socket}->close;
-    shutdown($self->{socket},2) ;
+    if(defined $self->{socket} && $self->{socket}->connected)
+      {
+        shutdown($self->{socket},2) ;
+      }
   }
 
 sub logmsg
@@ -194,9 +197,9 @@ sub readSock
     
     if (eof $fh)
       {
-        print "closing connection\n";
-        close $fh ;
-        return ;
+        #print "closing connection\n";
+        #close $fh ;
+        return 0;
       }
     
     my $line ;
@@ -412,9 +415,13 @@ Return the server pid or null (just like fork)
 When the object is destroyed, the 'END' routine will be called. This will
 kill the server if it was created by spawn.
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Dominique Dumont, Dominique_Dumont@grenoble.hp.com
+    Current Maintainer
+    Clint Edwards <cedwards@mcclatchyinteractive.com>
+
+    Original
+    Dominique Dumont, <Dominique_Dumont@grenoble.hp.com>
 
 =head1 SEE ALSO
 

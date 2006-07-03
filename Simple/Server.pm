@@ -2,7 +2,7 @@ package RPC::Simple::Server;
 
 use strict;
 use vars qw($VERSION @ISA @EXPORT %pidTab %deadChildren %fhTab $verbose
-           %fhTab @buddies);
+           @buddies);
 
 # %fhTab is a hash of fileno of file descriptors opened for reading the 
 # STDOUT of children. If contains the ref of the process objects controlling
@@ -23,13 +23,14 @@ require Exporter;
 # Do not simply export all your public functions/methods/constants.
 @EXPORT = qw(mainLoop chilDeath goodGuy registerChild unregisterChild);
 
-( $VERSION ) = '$Revision: 1.6 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 1.8 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 # Preloaded methods go here.
 
 # Autoload methods go after =cut, and are processed by the autosplit program.
 
 @buddies = ('127.0.0.1') ; # I am a good guy 
+our $verbose = 0;
 
 sub childDeath
   {
@@ -271,18 +272,26 @@ sub writeSock
     my $str = $paramStr ;
     print "$paramStr\n" if $verbose ;
     no strict 'refs' ;
-    my $val = $self->{mySocket}->send($str,0) ;
+    my $val;
+    eval
+      {
+        $val = $self->{mySocket}->send($str,0) ;
+      };
     warn "send failed $!\n" unless defined $val ;
     print "$val bytes sent\n" if $verbose ;
   }
 
-
-
-sub new 
+sub new
   {
     my $type = shift ;
     my $server = shift ;
     my $selector = shift ;
+    # Optional parameters which can be used to tell server not
+    # to accept the new connection but let the calling routine
+    # do that for us.  If these parameters are used, you may
+    # need to override the mainLoop subroutine.
+    my $socket = shift || undef;
+    my $manual_accept = shift || 0;
     my $self = {} ;
 
     $self->{'server'} = $server ;
@@ -290,26 +299,41 @@ sub new
 
     bless $self, $type;
 
-    print "Accepting connection\n";
-    
-    my ($socket,$iaddr) = $server -> accept(); # blocking call
+    if ($manual_accept && not defined $socket)
+      {
+        print "socket required for manual accept mode\n" ;
+        undef $self ;
+        return undef ;
+      }
+
+
+    my $iaddr;
+    unless ($manual_accept)
+      {
+        print "Accepting connection\n" ;
+        ($socket, $iaddr) = $server -> accept() ; # blocking call
+      }
 
     unless (defined $socket)
       {
-        print "accept failed $!\n" ; 
+        print "accept failed $!\n" ;
         undef $self ;
         return undef ;
-      } 
-    
+      }
+
     print "Connection accepted\n";
-    
+
     my $name = gethostbyaddr($socket->peeraddr,AF_INET) ;
     my $ipadr = $socket -> peerhost ;
     my $ok = 0 ;
     foreach (@buddies)
       {
         print "Comparing $ipadr with $_\n";
-        $ok = 1 if ($ipadr eq $_) ; 
+        if ($ipadr eq $_)
+          {
+            $ok = 1 ;
+            last;
+          }
       }
 
     unless ($ok)
@@ -321,15 +345,15 @@ sub new
       }
 
     $self->{mySocket} = $socket ;
-    $selector->add($socket) ;
+    $selector->add($socket) unless($manual_accept) ;
 
     # put the socket in non-blocking mode
     fcntl($socket,F_SETFL, O_NDELAY)  || die "fcntl failed $!\n";
 
     logmsg "connection from $name [ $ipadr ] ";
-
     return $self ;
   }
+
 
 # register an object/method to call 
 sub setMask
@@ -376,7 +400,8 @@ sub goodGuy
       }
     else
       {
-        my $addr = gethostbyname($good) ;
+        my (@addrs) = (gethostbyname($good))[4] ;
+        my $addr = join(".", unpack('C4', $addrs[0])) ;
         push @buddies, $addr ;
       }
   }
@@ -479,9 +504,13 @@ Returns the fileno of the client's socket.
 Some function are provided to handle remote processes. These functions are
 not yet tested. They may not stay in this class either.
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Dominique_Dumont@hp.com
+    Current Maintainer
+    Clint Edwards <cedwards@mcclatchyinteractive.com>
+
+    Original
+    Dominique Dumont, <Dominique_Dumont@grenoble.hp.com>
 
 =head1 SEE ALSO
 

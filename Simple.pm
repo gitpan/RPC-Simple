@@ -6,7 +6,7 @@ use vars qw/$VERSION/;
 use RPC::Simple::AnyLocal;
 use RPC::Simple::AnyRemote ;
 
-$VERSION = '1.001' ;
+$VERSION = '1.002' ;
 
 1;
 __END__
@@ -14,19 +14,103 @@ __END__
 
 =head1 NAME
 
-RPC::Simple - Perl classes to handle SRPC calls with call-back
+RPC::Simple - Perl classes to handle simple asynchronous RPC calls with 
+call-back
 
 =head1 SYNOPSIS
 
-  use RPC::Simple;
+Client Side :
 
-  #see test.pl file
+    package MyLocal ;
+    
+    use vars qw($VERSION @ISA @RPC_SUB $tempObj) ;
+    @ISA = qw(RPC::Simple::AnyLocal);
+    @RPC_SUB = qw(remoteAsk);
+
+    sub new
+    {
+        my $type = shift ;
+
+        my $self = {} ;
+        my $remote =  shift ;
+        bless $self,$type ;
+
+        $self->createRemote($remote,'MyRemote.pm') ;
+        return $self ;
+    }
+    sub answer
+    {
+        my $self = shift ;
+        my $result = shift ;
+
+        print "answer is $result\n" ;
+    }
+
+
+    package main ;
+    
+    use RPC::Simple::Factory ;
+
+    use IO::Socket ;
+    use IO::Select ;
+
+    my $verbose = 0 ; # you may change this value to see RPC traffic
+
+    my $factory = new RPC::Simple::Factory(verbose_ref => \$verbose) ;
+    my $local = new MyLocal($factory) ;
+    $local->remoteAsk(callback => 'answer');
+
+    my $selector = IO::Select->new();
+    $selector->add($factory->getSocket());
+
+    my ($toRead, undef, undef) = IO::Select->select($selector, undef, $selector, 10);
+    foreach my $fh (@$toRead)
+    {
+        if($fh == $factory->getSocket())
+        {
+            $factory->readSock();
+        }
+    }
+
+
+Server Side : 
+
+    package MyRemote ;
+
+    use vars qw($VERSION @ISA @RPC_SUB) ;
+    @ISA = qw(RPC::Simple::AnyRemote);
+    @RPC_SUB = qw(answer) ;
+
+    sub remoteAsk
+    {
+        my $self=shift ;
+        my %args = @_;
+        my $callback = $args{callback} || undef;
+
+        if (defined $callback)
+        {
+            $self->$callback("Hello local object");
+        }
+    }
+
+
+    package main ;
+
+    use RPC::Simple::Server ;
+    use RPC::Simple::Factory ;
+
+    my $arg = shift ;
+
+    my $verbose = 0 ; # you may change this value to see RPC traffic
+
+    my $pid = &spawn(undef,$verbose) ; # spawn server
+
+
+See t/connection.t and t/RealMyLocal.pm for more information.
 
 =head1 DESCRIPTION
 
-Dummy class which loads RPC::Simple::AnyLocal and RPC::Simple::AnyRemote ;
-
-This module deals with remote procedure call. I've tried to keep things
+This module implements remote procedure call. I've tried to keep things
 simple. 
 
 So this module should be :
@@ -65,7 +149,7 @@ and run the mainLoop method of RPC::Simple::Server.
 In each side you must declare all methods available on the other side
 in a global array of your class.
 
-How it works ? The user (i.e. you) must write a local class which inherit
+How it works ? The user (i.e. you) must write a local class which inherits
 from AnyLocal. AnyLocal is designed to handle Agent and Factory.
 
 
@@ -133,9 +217,17 @@ the RPC and callback is not very complicated, but I sure have a lot of
 problem to write a doc which make using this module simple. Future
 version may get better depending on your comments or questions.
 
-=head1 AUTHOR
+=head1 THANKS
 
-Dominique_Dumont@grenoble.hp.com
+    Mike South <msouth@fulcrum.org>
+
+=head1 AUTHORS
+
+    Current Maintainer
+    Clint Edwards <cedwards@mcclatchyinteractive.com>
+    
+    Original
+    Dominique Dumont, <Dominique_Dumont@grenoble.hp.com>
 
 =head1 SEE ALSO
 

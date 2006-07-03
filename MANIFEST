@@ -1,16 +1,16 @@
 Changes
+Makefile.PL
+MANIFEST
+META.yml			Module meta-data (added by MakeMaker)
+README
 Simple.pm
 Simple/Agent.pm
 Simple/AnyLocal.pm
-Simple/Factory.pm
-Simple/Server.pm
-Simple/ObjectHandler.pm
-Simple/CallHandler.pm
 Simple/AnyRemote.pm
 Simple/AnyWhere.pm
-MANIFEST
-Makefile.PL
-t/tk.t
-RealMyLocal.test_pm
-README
-META.yml                                 Module meta-data (added by MakeMaker)
+Simple/CallHandler.pm
+Simple/Factory.pm
+Simple/ObjectHandler.pm
+Simple/Server.pm
+t/connection.t
+t/RealMyLocal.pm

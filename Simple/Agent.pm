@@ -9,7 +9,7 @@ use RPC::Simple::Factory ;
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-( $VERSION ) = '$Revision: 1.5 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 1.7 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 # Preloaded methods go here.
 
@@ -55,6 +55,12 @@ sub destroy
     my $self = shift ;
     print "RPC::Simple::Agent destroyed\n";
     $self->{factory}->destroyRemoteObject($self->{'idx'});    
+
+    # We need to undef the factory and clientObj references
+    # because they create a circular reference and we can not
+    # destroy the factory or the clientObj
+    undef $self->{factory};
+    undef $self->{clientObj};
   }
 
 sub delegate
@@ -201,9 +207,13 @@ function to be called back are passed in the array ref.
 'request_id' is used to know what object and methos are to be called back. 
 These info were stored by the delegate function.
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Dominique_Dumont@grenoble.hp.com
+    Current Maintainer
+    Clint Edwards <cedwards@mcclatchyinteractive.com>
+    
+    Original
+    Dominique Dumont, <Dominique_Dumont@grenoble.hp.com>
 
 =head1 SEE ALSO
 

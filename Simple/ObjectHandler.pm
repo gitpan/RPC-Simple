@@ -9,7 +9,7 @@ use RPC::Simple::CallHandler ;
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-( $VERSION ) = '$Revision: 1.5 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 1.7 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 sub new
   {
@@ -25,12 +25,12 @@ sub new
     
     my $result = 1 ;
     
-    my $fileName = $objName ;
-    # remove prefix for objName
-    $fileName .= '.pm' unless $fileName =~ /\./ ;
+    #We can remove the .pm off the object name if
+    #it exists.  This will allow us to be called
+    #as an object name and even a fully qualified
+    #object name ie.(Object.pm, Ojbect, Some::Object)
     $objName =~ s/\.\w*$// ;
-
-    eval { require $fileName ; import $objName } ;
+    eval "require $objName; $objName->import()" ;
 
     if ($@)
       {
@@ -179,9 +179,13 @@ Used to call the local object with passed method and arguments.
 Called by the callHandler when a function performed by the remote object
 is over. $result being the result of this function.
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Dominique_Dumont@hp.com
+    Current Maintainer
+    Clint Edwards <cedwards@mcclatchyinteractive.com>
+
+    Original
+    Dominique Dumont, <Dominique_Dumont@grenoble.hp.com>
 
 =head1 SEE ALSO
 

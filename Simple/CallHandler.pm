@@ -3,7 +3,7 @@ package RPC::Simple::CallHandler;
 use strict;
 use vars qw($VERSION);
 
-( $VERSION ) = '$Revision: 1.5 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 1.6 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 # Items to export into callers namespace by default. Note: do not export
 # names by default without a very good reason. Use EXPORT_OK instead.
@@ -86,9 +86,13 @@ Usually the call-back function will be a closure.
 
 call-back method.
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Dominique_Dumont@hp.com
+    Current Maintainer
+    Clint Edwards <cedwards@mcclatchyinteractive.com>
+
+    Original
+    Dominique Dumont, <Dominique_Dumont@grenoble.hp.com>
 
 =head1 SEE ALSO
 

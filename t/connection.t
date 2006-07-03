@@ -22,8 +22,17 @@ use warnings;
 # of the test code):
 
 package MyLocal ;
+
+# MyLocal inherits from RPC::Simple::AnyLocal and is used
+# to dispatch all calls in the @RPC_SUB array to the remote
+# object created with a call to createRemote().
+
 use vars qw($VERSION @ISA @RPC_SUB $tempObj) ;
 @ISA = qw(RPC::Simple::AnyLocal);
+
+# We must define our remote methods here, if we do not then
+# AnyLocall will not dispatch the method call to the remote
+# RPC server.
 @RPC_SUB = qw(close remoteHello remoteAsk);
 
 sub new 
@@ -35,7 +44,8 @@ sub new
     my $remote =  shift ; 
     bless $self,$type ;
 
-    $self->createRemote($remote,'RealMyLocal.test_pm') ;
+    # Essentially call MyRemote->new() on the remote RPC server
+    $self->createRemote($remote,'t::RealMyLocal.pm') ;
     return $self ;
   }
 
@@ -61,15 +71,19 @@ sub answer
 
 package main ;
 
-use Tk ;
 use RPC::Simple::Server ;
 use RPC::Simple::Factory ;
+
+use IO::Socket ;
+use IO::Select ;
 
 my $arg = shift ;
 my $clientPid ;
 
 my $verbose = 0 ; # you may change this value to see RPC traffic
 
+# Either spawn/fork and enter the mainLoop or go directly
+# into the mainLoop
 if (not defined $arg or $arg eq '-i')
   {
     my $pid = &spawn(undef,$verbose) ; # spawn server
@@ -82,87 +96,36 @@ elsif ($arg eq '-s')
 ok(1,"server spawned") ;
 
 # client part
-my $mw = MainWindow-> new ;
-# create factory
-my $factory = new RPC::Simple::Factory($mw,\$verbose) ;
+
+# Create a connection to the RPC Server on localhost, use the
+# remote_host argument for Factory->new() when connecting to
+# a remote server.
+my $factory = new RPC::Simple::Factory(verbose_ref => \$verbose) ;
 ok($factory, "Factory created") ;
 
+# Create the MyLocal object, which will connect to the RPC server
+# and call new on the remote object.
 my $local = new MyLocal($factory) ;
 ok($local,"Local object created" ) ;
 
-my @buttons ;
+# Very simple, now we just execute the remoteAsk method on the
+# remote object.
+$local->remoteAsk(callback => 'answer');
 
-push @buttons ,
-  $mw -> Button (-text => 'remote hello', 
-		 -command => sub {$local->remoteHello();} ) ;
+my $selector = IO::Select->new();
+$selector->add($factory->getSocket());
 
-push @buttons ,
-  $mw -> Button (-text => 'remote query', 
-		 -command => sub 
-		 {
-		   $local->remoteAsk(sub{$local->answer(@_)});
-		 } )  ;
+# Wait for a response from the remote call, and use readSock
+# to execute the callback.
+my ($toRead, undef, undef) = IO::Select->select($selector, undef, $selector, 10);
 
-push @buttons ,
-  $mw -> Button (-text => 'remote query, implicit answer', 
-		 -command => sub 
-		 {
-		   $local->remoteAsk();
-		 } )  ;
+foreach my $fh (@$toRead)
+{
+    if($fh == $factory->getSocket())
+    {
+        $factory->readSock();
+    }
+}
 
-my $tempObj ;
-my $queryb = 
-  $mw -> Button (-text => 'remote query on new object', 
-                 -state => 'disabled',
-                 -command => sub 
-                 {$tempObj->remoteAsk(sub{$tempObj->answer(@_)});} ) ;
-
-push @buttons ,
-  $mw -> Button (-text => 'create new object', 
-		 -command => sub 
-		 {
-		   $tempObj =  new MyLocal($factory) ;
-		   $queryb->configure( -state => 'active');
-		 } ) ;
-
-
-push @buttons, $queryb, 
-  $mw -> Button (-text => 'delete new object', 
-		 -command => sub 
-		 {
-		   $tempObj->destroy ; 
-		   undef $tempObj;
-		   $queryb->configure( -state => 'disabled');
-		 } ) ;
-
-push @buttons, $mw -> Button (-text => 'quit', 
-			      -command => sub { ok(1); exit;} ) ;
-
-map {$_->pack} @buttons ;
-
-my $run = sub
-  {
-    my $b = shift @buttons ;
-
-    my $col =  $b->cget('-background') ;
-
-    $b->configure(-background => 'red') ;
-    $mw->idletasks;
-    $mw->after(400);
-
-    $b -> invoke ;
-    $mw->idletasks;
-
-    $mw->after(400);
-    $b->configure(-background => $col) ;
-    $mw->idletasks;
-};
-
-
-if (not defined $arg)
-  {
-    $mw->repeat(1000, $run) ;
-  }
-
-MainLoop ; # Tk's
-
+ok(1);
+exit;

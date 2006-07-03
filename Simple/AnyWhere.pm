@@ -8,7 +8,7 @@ use vars qw($VERSION $AUTOLOAD @RPC_SUB %_RPC_SUBS);
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-( $VERSION ) = '$Revision: 1.5 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 1.6 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 # Preloaded methods go here.
 
@@ -74,9 +74,13 @@ This class is intented to be inherited only by AnyLocal or AnyRemote.
 Don't use it yourself.
 
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Dominique Dumont, Dominique_Dumont@grenoble.hp.com
+    Current Maintainer
+    Clint Edwards <cedwards@mcclatchyinteractive.com>
+
+    Original
+    Dominique Dumont, <Dominique_Dumont@grenoble.hp.com>
 
 =head1 SEE ALSO
 

@@ -8,7 +8,7 @@ use RPC::Simple::AnyWhere ;
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-( $VERSION ) = '$Revision: 1.5 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 1.6 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 @ISA = qw(RPC::Simple::AnyWhere) ;
 
@@ -126,9 +126,13 @@ RPC::Simple::ObjectHandler object reference
 
 Store the pwd of the object during its creation.
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Dominique Dumont, Dominique_Dumont@grenoble.hp.com
+    Current Maintainer
+    Clint Edwards <cedwards@mcclatchyinteractive.com>
+
+    Original
+    Dominique Dumont, <Dominique_Dumont@grenoble.hp.com>
 
 =head1 SEE ALSO
 

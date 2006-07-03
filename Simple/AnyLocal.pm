@@ -11,7 +11,7 @@ use RPC::Simple::AnyWhere ;
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-( $VERSION ) = '$Revision: 1.7 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 1.8 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 @ISA = qw(RPC::Simple::AnyWhere) ;
 *_RPC_SUBS=*RPC::Simple::AnyWhere::_RPC_SUBS;
@@ -203,9 +203,13 @@ a recipe for a good headache, you really (I mean it) should use subroutine
 stubs for the auloaded functions. (It does really work better).
 See AutoLoad(3).
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Dominique Dumont, Dominique_Dumont@grenoble.hp.com
+    Current Maintainer
+    Clint Edwards <cedwards@mcclatchyinteractive.com>
+
+    Original
+    Dominique Dumont, <Dominique_Dumont@grenoble.hp.com>
 
 =head1 SEE ALSO
 

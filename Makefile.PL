@@ -8,6 +8,5 @@ WriteMakefile(
               'PREREQ_PM' =>
               {
                'Data::Dumper' => 0,
-               'Tk' => 0 
               }
 );
